@@ -53,7 +53,6 @@ class WeatherViewModel @Inject constructor(private val repository: SettingsRepos
 
     init {
         viewModelScope.launch {
-            // Collect the first non-loading value to trigger initial load
             repository.lastCityFlow.collect { savedCity ->
                 if (savedCity != "Loading..." && _weatherResult.value is NetworkResponse.NullCheck) {
                     getCityData(savedCity)
@@ -69,21 +68,24 @@ class WeatherViewModel @Inject constructor(private val repository: SettingsRepos
     fun getCityData(city: String) {
         LoggerUtil.debug("city $city")
         updateCity(city)
-        
-        if (!isOnline.value) {
-            _locationResult.value = NetworkResponse.Error("No Internet Connection")
-            return
-        }
-
-        _locationResult.value = NetworkResponse.Loading
 
         viewModelScope.launch {
+            if (!isOnline.value) {
+                _locationResult.value = NetworkResponse.Error("No Internet Connection")
+                return@launch
+            }
+
+            _locationResult.value = NetworkResponse.Loading
+
             try {
                 val response = locationApi.getCityLocation(BuildConfig.API_KEY, city)
                 if (response.isSuccessful) {
-                    response.body()?.let {
-                        _locationResult.value = NetworkResponse.Success(it)
-                        getLatLongData(it[0].lat, it[0].lon)
+                    val locationModel = response.body()
+                    if (locationModel != null && locationModel.isNotEmpty()) {
+                        _locationResult.value = NetworkResponse.Success(locationModel)
+                        getLatLongData(locationModel[0].lat, locationModel[0].lon)
+                    } else {
+                        _locationResult.value = NetworkResponse.Error("City not found")
                     }
                 } else {
                     _locationResult.value = NetworkResponse.Error("Error: ${response.message()}")
@@ -100,14 +102,14 @@ class WeatherViewModel @Inject constructor(private val repository: SettingsRepos
      * @param lon
      */
     fun getLatLongData(lat: Double, lon: Double) {
-        if (!isOnline.value) {
-            _weatherResult.value = NetworkResponse.Error("No Internet Connection")
-            return
-        }
-
-        _weatherResult.value = NetworkResponse.Loading
-
         viewModelScope.launch {
+            if (!isOnline.value) {
+                _weatherResult.value = NetworkResponse.Error("No Internet Connection")
+                return@launch
+            }
+
+            _weatherResult.value = NetworkResponse.Loading
+
             try {
                 val response = weatherApi.getCityWeather(BuildConfig.API_KEY, lat, lon)
                 if (response.isSuccessful) {
