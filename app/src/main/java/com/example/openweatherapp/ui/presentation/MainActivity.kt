@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -83,6 +84,8 @@ fun WeatherPage(name: String, modifier: Modifier, viewModel: WeatherViewModel) {
     val weatherResult by viewModel.weatherResult.collectAsStateWithLifecycle()
     val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
 
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     LoggerUtil.debug("weatherResult $weatherResult")
 
     Column(
@@ -109,7 +112,8 @@ fun WeatherPage(name: String, modifier: Modifier, viewModel: WeatherViewModel) {
             IconButton(modifier = Modifier
                 .padding(start = 10.dp)
                 .align(Alignment.CenterVertically),
-                onClick = { viewModel.getCityData(city.trim()) }) {
+                onClick = { viewModel.getCityData(city.trim())
+                    keyboardController?.hide()}) {
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search",
@@ -136,7 +140,13 @@ fun WeatherPage(name: String, modifier: Modifier, viewModel: WeatherViewModel) {
             }
 
             is NetworkResponse.Error -> {
-                Text(text = result.message)
+                Text(
+                    text = result.message,
+                    color = Color.White,
+                    modifier = Modifier.background(Color.Red).fillMaxWidth()
+                        .padding(all = 10.dp)
+                        .align(Alignment.CenterHorizontally)
+                )
 
             }
 
@@ -175,12 +185,9 @@ fun WeatherDetails(data: WeatherModel, modifier: Modifier) {
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = data.sys.country, fontSize = 17.sp, color = Color.Gray)
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-
-        Text(text = data.name, fontSize = 24.sp)
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(text = "${data.main.temp}°C", fontSize = 64.sp)
+        Text(text = "${data.main.temp}°C", fontSize = 55.sp)
 
         AsyncImage(
             modifier = Modifier.size(160.dp),
@@ -191,7 +198,9 @@ fun WeatherDetails(data: WeatherModel, modifier: Modifier) {
             error = painterResource(R.drawable.error)
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Text(text = data.weather[0].description, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color.Gray)
+
+        Spacer(modifier = Modifier.height(20.dp))
 
         Card {
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -199,29 +208,30 @@ fun WeatherDetails(data: WeatherModel, modifier: Modifier) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
-                    WeatherKeyValue(value = data.main.humidity.toString(), key = "Humidity")
-                    WeatherKeyValue(value = data.wind.speed.toString(), key = "Wind Speed")
+                    WeatherKeyValue(value = "${data.main.temp_min.toString()}°C", key = "Temp Min")
+                    WeatherKeyValue(value = "${data.main.temp_max.toString()}°C", key = "Temp Max")
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
-                    WeatherKeyValue(value = data.main.temp.toString(), key = "Temp")
-                    WeatherKeyValue(value = data.wind.speed.toString(), key = "Wind")
+                    WeatherKeyValue(value = data.main.humidity, key = "Humidity")
+                    WeatherKeyValue(value = data.main.pressure.toString(), key = "Pressure")
                 }
-                /*Row(
+                Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
-                    WeatherKeyValue(
-                        value = data.location.localtime.split(" ")[1],
-                        key = "Local Time"
-                    )
-                    WeatherKeyValue(
-                        value = data.location.localtime.split(" ")[0],
-                        key = "Local Date"
-                    )
-                }*/
+                    WeatherKeyValue(value = data.wind.speed.toString(), key = "Wind Speed")
+                    WeatherKeyValue(value = data.main.feels_like.toString(), key = "Feels Like")
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    WeatherKeyValue(value = data.coord.lat.toString(), key = "Lat")
+                    WeatherKeyValue(value = data.coord.lon.toString(), key = "Long")
+                }
             }
         }
 
