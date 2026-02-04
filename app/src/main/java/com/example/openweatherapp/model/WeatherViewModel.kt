@@ -1,0 +1,138 @@
+package com.example.openweatherapp.model
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.openweatherapp.BuildConfig
+import com.example.openweatherapp.data.LocationModel
+import com.example.openweatherapp.data.WeatherModel
+import com.example.openweatherapp.remote.NetworkResponse
+import com.example.openweatherapp.remote.RetrofitInstance
+import com.example.openweatherapp.repository.SettingsRepository
+import com.example.openweatherapp.utils.ConnectivityObserver
+import com.example.openweatherapp.utils.LoggerUtil
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@HiltViewModel
+class WeatherViewModel @Inject constructor(private val repository: SettingsRepository,
+                                           connectivityObserver: ConnectivityObserver) : ViewModel() {
+
+    private val locationApi = RetrofitInstance.weatherApi(BuildConfig.LOCATION_URL)
+    private val weatherApi = RetrofitInstance.weatherApi(BuildConfig.WEATHER_URL)
+
+    private val _locationResult = MutableStateFlow<NetworkResponse<LocationModel>>(NetworkResponse.NullCheck)
+    val locationResult: MutableStateFlow<NetworkResponse<LocationModel>> = _locationResult
+
+    private val _weatherResult = MutableStateFlow<NetworkResponse<WeatherModel>>(NetworkResponse.NullCheck)
+    val weatherResult: MutableStateFlow<NetworkResponse<WeatherModel>> = _weatherResult
+
+    init {
+        viewModelScope.launch {
+            // Collect the first non-loading value to trigger initial load
+            repository.lastCityFlow.collect { savedCity ->
+                if (savedCity != "Loading..." && _weatherResult.value is NetworkResponse.NullCheck) {
+                    getCityData(savedCity)
+                }
+            }
+        }
+    }
+
+    /**
+     * API call to get lat and long of the city
+     * @param city
+     */
+    fun getCityData(city: String) {
+        LoggerUtil.debug("city $city")
+        updateCity(city)
+        val currentSavedCity = cityName.value
+        LoggerUtil.debug("Currently saved: $currentSavedCity, New search: $city")
+
+        // Your existing logic...
+        updateCity(city)
+
+        LoggerUtil.debug("locationResult")
+
+        viewModelScope.launch {
+            try {
+                LoggerUtil.debug("locationApi $locationApi")
+                val response = locationApi.getCityLocation(BuildConfig.API_KEY, city)
+                LoggerUtil.debug("locationResult $response")
+                if (response.isSuccessful) {
+                    response.body()?.let {
+                        _locationResult.value = NetworkResponse.Success(it)
+                        LoggerUtil.debug("locationResult ${it.toString()}")
+                        getLatLongData(it[0].lat, it[0].lon)
+                    }
+                } else {
+                    _locationResult.value = NetworkResponse.Error("Error: ${response.message()}")
+                }
+            } catch (e: Exception) {
+                _locationResult.value = NetworkResponse.Error("Error: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * API call to get weather details of the lat and long
+     * @param lat
+     * @param lon
+     */
+    fun getLatLongData(lat: Double, lon: Double) {
+
+        LoggerUtil.debug("lat $lat  lon $lon")
+        //_weatherResult.value = NetworkResponse.Loading
+
+        viewModelScope.launch {
+            try {
+                LoggerUtil.debug("weatherApi $weatherApi")
+                val response = weatherApi.getCityWeather(BuildConfig.API_KEY, lat, lon)
+                LoggerUtil.debug("weatherResult $response")
+                if (response.isSuccessful) {
+                    response.body()?.let {
+                        _weatherResult.value = NetworkResponse.Success(it)
+                        LoggerUtil.debug("weatherResult ${it.toString()}")
+                    }
+                } else {
+                    _weatherResult.value = NetworkResponse.Error("Error: ${response.message()}")
+                }
+            } catch (e: Exception) {
+                _weatherResult.value = NetworkResponse.Error("Error: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Observe the last searched city
+     */
+    val cityName: StateFlow<String> = repository.lastCityFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = "Loading..."
+        )
+
+    /**
+     * Update the last searched city
+     */
+    fun updateCity(newCity: String) {
+        viewModelScope.launch {
+            repository.saveCity(newCity)
+        }
+    }
+
+    /**
+     * Update the last searched city
+     */
+    val isOnline: StateFlow<Boolean> = connectivityObserver.isConnected
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
+}
