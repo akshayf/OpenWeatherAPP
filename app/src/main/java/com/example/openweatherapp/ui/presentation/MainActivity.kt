@@ -1,9 +1,13 @@
 package com.example.openweatherapp.ui.presentation
 
+import android.Manifest
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +23,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -26,6 +32,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -87,6 +95,28 @@ fun WeatherPage(name: String, modifier: Modifier, viewModel: WeatherViewModel) {
     val keyboardController = LocalSoftwareKeyboardController.current
 
     LoggerUtil.debug("weatherResult $weatherResult")
+
+    //Call for location permission
+    /*val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        val granted = it.entries.all { it.value }
+    }
+
+    var showDialog by remember { mutableStateOf(false) }
+
+    if (showDialog) {
+        LocationPermissionDialog(
+            onDismiss = { showDialog = false },
+            onConfirm = {
+                showDialog = false
+                launcher.launch(arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ))
+            }
+        )
+    }*/
 
     Column(
         modifier = Modifier
@@ -249,4 +279,27 @@ fun WeatherKeyValue(key: String, value: String) {
         Text(text = value, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Text(text = key, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Gray)
     }
+}
+
+
+@Composable
+fun LocationPermissionDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Location Access Required") },
+        text = { Text("We need your location to automatically show the weather in your current city. Would you like to enable it?") },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text("Allow")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Not Now")
+            }
+        }
+    )
 }

@@ -55,6 +55,9 @@ android {
         compose = true
         buildConfig = true
     }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {
@@ -84,7 +87,19 @@ dependencies {
     //hilt
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+    testImplementation(libs.hilt.android.testing)
+    kspTest(libs.hilt.compiler)
+
 
     // DataStore
     implementation(libs.androidx.datastore.preferences)
+
+    // Coroutines test
+    testImplementation(libs.kotlinx.coroutines.test)
+
+    // Mockk
+    testImplementation(libs.mockk)
+
+    // Turbine
+    testImplementation(libs.turbine)
 }

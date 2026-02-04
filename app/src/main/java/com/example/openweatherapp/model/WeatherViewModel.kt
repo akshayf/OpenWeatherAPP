@@ -26,10 +26,30 @@ class WeatherViewModel @Inject constructor(private val repository: SettingsRepos
     private val weatherApi = RetrofitInstance.weatherApi(BuildConfig.WEATHER_URL)
 
     private val _locationResult = MutableStateFlow<NetworkResponse<LocationModel>>(NetworkResponse.NullCheck)
-    val locationResult: MutableStateFlow<NetworkResponse<LocationModel>> = _locationResult
+    val locationResult: StateFlow<NetworkResponse<LocationModel>> = _locationResult
 
     private val _weatherResult = MutableStateFlow<NetworkResponse<WeatherModel>>(NetworkResponse.NullCheck)
-    val weatherResult: MutableStateFlow<NetworkResponse<WeatherModel>> = _weatherResult
+    val weatherResult: StateFlow<NetworkResponse<WeatherModel>> = _weatherResult
+
+    /**
+     * Observe the last searched city
+     */
+    val cityName: StateFlow<String> = repository.lastCityFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = "Loading..."
+        )
+
+    /**
+     * Observe connectivity status
+     */
+    val isOnline: StateFlow<Boolean> = connectivityObserver.isConnected
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = false
+        )
 
     init {
         viewModelScope.launch {
@@ -49,23 +69,20 @@ class WeatherViewModel @Inject constructor(private val repository: SettingsRepos
     fun getCityData(city: String) {
         LoggerUtil.debug("city $city")
         updateCity(city)
-        val currentSavedCity = cityName.value
-        LoggerUtil.debug("Currently saved: $currentSavedCity, New search: $city")
+        
+        if (!isOnline.value) {
+            _locationResult.value = NetworkResponse.Error("No Internet Connection")
+            return
+        }
 
-        // Your existing logic...
-        updateCity(city)
-
-        LoggerUtil.debug("locationResult")
+        _locationResult.value = NetworkResponse.Loading
 
         viewModelScope.launch {
             try {
-                LoggerUtil.debug("locationApi $locationApi")
                 val response = locationApi.getCityLocation(BuildConfig.API_KEY, city)
-                LoggerUtil.debug("locationResult $response")
                 if (response.isSuccessful) {
                     response.body()?.let {
                         _locationResult.value = NetworkResponse.Success(it)
-                        LoggerUtil.debug("locationResult ${it.toString()}")
                         getLatLongData(it[0].lat, it[0].lon)
                     }
                 } else {
@@ -83,19 +100,19 @@ class WeatherViewModel @Inject constructor(private val repository: SettingsRepos
      * @param lon
      */
     fun getLatLongData(lat: Double, lon: Double) {
+        if (!isOnline.value) {
+            _weatherResult.value = NetworkResponse.Error("No Internet Connection")
+            return
+        }
 
-        LoggerUtil.debug("lat $lat  lon $lon")
-        //_weatherResult.value = NetworkResponse.Loading
+        _weatherResult.value = NetworkResponse.Loading
 
         viewModelScope.launch {
             try {
-                LoggerUtil.debug("weatherApi $weatherApi")
                 val response = weatherApi.getCityWeather(BuildConfig.API_KEY, lat, lon)
-                LoggerUtil.debug("weatherResult $response")
                 if (response.isSuccessful) {
                     response.body()?.let {
                         _weatherResult.value = NetworkResponse.Success(it)
-                        LoggerUtil.debug("weatherResult ${it.toString()}")
                     }
                 } else {
                     _weatherResult.value = NetworkResponse.Error("Error: ${response.message()}")
@@ -107,16 +124,6 @@ class WeatherViewModel @Inject constructor(private val repository: SettingsRepos
     }
 
     /**
-     * Observe the last searched city
-     */
-    val cityName: StateFlow<String> = repository.lastCityFlow
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = "Loading..."
-        )
-
-    /**
      * Update the last searched city
      */
     fun updateCity(newCity: String) {
@@ -124,15 +131,4 @@ class WeatherViewModel @Inject constructor(private val repository: SettingsRepos
             repository.saveCity(newCity)
         }
     }
-
-    /**
-     * Update the last searched city
-     */
-    val isOnline: StateFlow<Boolean> = connectivityObserver.isConnected
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = false
-        )
-
 }
