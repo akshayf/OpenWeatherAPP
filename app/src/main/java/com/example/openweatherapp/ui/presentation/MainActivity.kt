@@ -53,7 +53,7 @@ import coil.compose.AsyncImage
 import com.example.openweatherapp.BuildConfig
 import com.example.openweatherapp.R
 import com.example.openweatherapp.data.WeatherModel
-import com.example.openweatherapp.model.WeatherViewModel
+import com.example.openweatherapp.viewmodel.WeatherViewModel
 import com.example.openweatherapp.remote.NetworkResponse
 import com.example.openweatherapp.ui.theme.OpenWeatherAPPTheme
 import com.example.openweatherapp.utils.LoggerUtil
@@ -142,7 +142,7 @@ fun WeatherPage(name: String, modifier: Modifier, viewModel: WeatherViewModel) {
             IconButton(modifier = Modifier
                 .padding(start = 10.dp)
                 .align(Alignment.CenterVertically),
-                onClick = { viewModel.getCityData(city.trim())
+                onClick = { viewModel.getWeatherData(city.trim())
                     keyboardController?.hide()}) {
                 Icon(
                     imageVector = Icons.Default.Search,

@@ -10,7 +10,6 @@ interface WeatherApi {
 
     @GET("weather")
     suspend fun getCityWeather(
-        @Query("appid") apiKey: String,
         @Query("lat") lat: Double,
         @Query("lon") lon: Double,
         @Query("units") units: String = "metric"
@@ -18,7 +17,6 @@ interface WeatherApi {
 
     @GET("direct")
     suspend fun getCityLocation(
-        @Query("appid") apiKey: String,
         @Query("q") city: String,
         @Query("limit") limit: Int = 1
     ): Response<LocationModel>

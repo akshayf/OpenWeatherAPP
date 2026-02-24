@@ -1,4 +1,4 @@
-package com.example.openweatherapp.model
+package com.example.openweatherapp.viewmodel
 
 import app.cash.turbine.test
 import com.example.openweatherapp.BuildConfig
