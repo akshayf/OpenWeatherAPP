@@ -6,16 +6,26 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import javax.inject.Inject
 
-class ConnectivityObserver(context: Context) {
+/**
+ * Observes the network connectivity status of the device.
+ */
+class ConnectivityObserver @Inject constructor(
+    @param:ApplicationContext private val context: Context
+) {
     @SuppressLint("ServiceCast")
     private val connectivityManager =
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
+    /**
+     * A Flow that emits true when internet is available and false otherwise.
+     */
     val isConnected: Flow<Boolean> = callbackFlow {
         val callback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {

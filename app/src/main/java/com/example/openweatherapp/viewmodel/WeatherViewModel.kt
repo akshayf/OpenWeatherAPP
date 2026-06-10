@@ -2,71 +2,152 @@ package com.example.openweatherapp.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.openweatherapp.data.WeatherModel
-import com.example.openweatherapp.remote.NetworkResponse
-import com.example.openweatherapp.repository.SettingsRepository
-import com.example.openweatherapp.repository.WeatherRepository
+import androidx.paging.cachedIn
+import com.example.openweatherapp.domain.usecase.GetLastCityUseCase
+import com.example.openweatherapp.domain.usecase.GetWeatherUseCase
+import com.example.openweatherapp.domain.usecase.SaveLastCityUseCase
+import com.example.openweatherapp.domain.usecase.SearchCitiesUseCase
+import com.example.openweatherapp.BuildConfig
+import com.example.openweatherapp.data.remote.NetworkResponse
+import com.example.openweatherapp.ui.weather.WeatherIntent
+import com.example.openweatherapp.ui.weather.WeatherState
 import com.example.openweatherapp.utils.ConnectivityObserver
+import com.example.openweatherapp.utils.ResourceProvider
+import com.example.openweatherapp.R
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(FlowPreview::class)
 @HiltViewModel
 class WeatherViewModel @Inject constructor(
-    private val settingsRepository: SettingsRepository,
-    private val weatherRepository: WeatherRepository,
-    connectivityObserver: ConnectivityObserver
+    private val getWeatherUseCase: GetWeatherUseCase,
+    private val getLastCityUseCase: GetLastCityUseCase,
+    private val saveLastCityUseCase: SaveLastCityUseCase,
+    private val searchCitiesUseCase: SearchCitiesUseCase,
+    private val connectivityObserver: ConnectivityObserver,
+    private val resourceProvider: ResourceProvider,
 ) : ViewModel() {
 
-    private val _weatherResult = MutableStateFlow<NetworkResponse<WeatherModel>>(NetworkResponse.NullCheck)
-    val weatherResult: StateFlow<NetworkResponse<WeatherModel>> = _weatherResult
+    private val _state = MutableStateFlow(WeatherState())
+    val state: StateFlow<WeatherState> = _state.asStateFlow()
 
-    val cityName: StateFlow<String> = settingsRepository.lastCityFlow
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = "Loading..."
-        )
-
-    val isOnline: StateFlow<Boolean> = connectivityObserver.isConnected
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Eagerly,
-            initialValue = false
-        )
+    private val searchQuery = MutableStateFlow("")
 
     init {
+        observeCityName()
+        observeConnectivity()
+        observeSearchQuery()
+    }
+
+    /**
+     * Handles user interactions and dispatches state updates.
+     */
+    fun onIntent(intent: WeatherIntent) {
+        when (intent) {
+            is WeatherIntent.FetchWeather -> fetchWeatherData(intent.city)
+            is WeatherIntent.RefreshWeather -> fetchWeatherData(intent.city)
+            is WeatherIntent.SearchCities -> searchQuery.value = intent.query
+            WeatherIntent.ClearSearchResults -> clearSearchResults()
+        }
+    }
+
+    /**
+     * Clears city search results and search query.
+     */
+    private fun clearSearchResults() {
+        searchQuery.value = ""
+        _state.update { it.copy(searchResults = emptyFlow()) }
+    }
+
+    /**
+     * Observes the search query flow with debounce to limit API calls.
+     */
+    private fun observeSearchQuery() {
         viewModelScope.launch {
-            settingsRepository.lastCityFlow.collect { savedCity ->
-                if (savedCity != "Loading..." && _weatherResult.value is NetworkResponse.NullCheck) {
-                    getWeatherData(savedCity)
+            searchQuery
+                .debounce(300L)
+                .distinctUntilChanged()
+                .filter { it.length > 2 }
+                .collect { query ->
+                    searchCities(query)
+                }
+        }
+    }
+
+    /**
+     * Observes the last searched city from settings and triggers initial fetch.
+     */
+    private fun observeCityName() {
+        viewModelScope.launch {
+            getLastCityUseCase().collect { city ->
+                _state.update { it.copy(cityName = city) }
+                if (_state.value.weatherData == null) {
+                    fetchWeatherData(city)
                 }
             }
         }
     }
 
-    fun getWeatherData(city: String) {
-        updateCity(city)
-
+    /**
+     * Observes network connectivity status.
+     */
+    private fun observeConnectivity() {
         viewModelScope.launch {
-            if (!isOnline.value) {
-                _weatherResult.value = NetworkResponse.Error("No Internet Connection")
-                return@launch
+            connectivityObserver.isConnected.collect { isConnected ->
+                _state.update { it.copy(isOnline = isConnected) }
             }
-
-            _weatherResult.value = NetworkResponse.Loading
-            val response = weatherRepository.getWeather(city)
-            _weatherResult.value = response
         }
     }
 
-    private fun updateCity(newCity: String) {
+    /**
+     * Searches for cities matching the query using Paging 3.
+     */
+    private fun searchCities(query: String) {
+        val results = searchCitiesUseCase(query).cachedIn(viewModelScope)
+        _state.update { it.copy(searchResults = results) }
+    }
+
+    /**
+     * Fetches weather data for a specific city.
+     */
+    private fun fetchWeatherData(city: String) {
         viewModelScope.launch {
-            settingsRepository.saveCity(newCity)
+            if (!_state.value.isOnline) {
+                _state.update { it.copy(error = resourceProvider.getString(R.string.no_internet), isLoading = false) }
+                return@launch
+            }
+
+            _state.update { it.copy(isLoading = true, error = null) }
+            
+            saveLastCityUseCase(city)
+
+            when (val response = getWeatherUseCase(city)) {
+                is NetworkResponse.Success -> {
+                    val iconCode = response.data.weather.firstOrNull()?.icon
+                    val iconUrl = iconCode?.let { 
+                        resourceProvider.getString(R.string.icon_url_format, BuildConfig.ICON_URL, it)
+                    }
+                    _state.update { 
+                        it.copy(
+                            weatherData = response.data,
+                            weatherIconUrl = iconUrl,
+                            isLoading = false,
+                            error = null
+                        ) 
+                    }
+                }
+                is NetworkResponse.Error -> {
+                    _state.update { 
+                        it.copy(
+                            error = response.message,
+                            isLoading = false
+                        ) 
+                    }
+                }
+            }
         }
     }
 }

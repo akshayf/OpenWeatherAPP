@@ -1,3 +1,27 @@
 <resources>
     <string name="app_name">OpenWeatherAPP</string>
+    <string name="search_hint">Search by City</string>
+    <string name="no_internet">No Internet Connection</string>
+    <string name="temp_min">Temp Min</string>
+    <string name="temp_max">Temp Max</string>
+    <string name="humidity">Humidity</string>
+    <string name="pressure">Pressure</string>
+    <string name="wind_speed">Wind Speed</string>
+    <string name="feels_like">Feels Like</string>
+    <string name="lat">Lat</string>
+    <string name="lon">Long</string>
+    <string name="sunrise">Sunrise</string>
+    <string name="sunset">Sunset</string>
+    <string name="search_desc">Search</string>
+    <string name="location_desc">Location: %1$s, %2$s</string>
+    <string name="temperature_desc">Current temperature: %1$s degrees Celsius</string>
+    <string name="weather_condition_desc">Weather condition: %1$s</string>
+    <string name="key_value_semantics">%1$s is %2$s</string>
+    <string name="select_city">Select %1$s</string>
+    <string name="icon_url_format">%1$s%2$s@2x.png</string>
+    <string name="error_empty_response">Empty weather response</string>
+    <string name="error_fetching_weather">Error fetching weather: %1$s</string>
+    <string name="error_city_not_found">City not found</string>
+    <string name="error_fetching_location">Error fetching location: %1$s</string>
+    <string name="error_exception">Exception: %1$s</string>
 </resources>

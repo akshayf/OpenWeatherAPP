@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.secrets)
 }
 
 android {
@@ -27,10 +28,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "WEATHER_URL", "\"https://api.openweathermap.org/data/2.5/\"")
-            buildConfigField("String", "LOCATION_URL", "\"https://api.openweathermap.org/geo/1.0/\"")
-            buildConfigField("String", "ICON_URL", "\"https://openweathermap.org/img/wn/\"")
-            buildConfigField("String", "API_KEY", "\"28c17cf9201e7ff9acd7bb11b03333ed\"")
+            buildConfigField("String", "WEATHER_URL", project.property("WEATHER_URL") as String)
+            buildConfigField("String", "LOCATION_URL", project.property("LOCATION_URL") as String)
+            buildConfigField("String", "ICON_URL", project.property("ICON_URL") as String)
         }
         release {
             isMinifyEnabled = false
@@ -38,10 +38,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "WEATHER_URL", "\"https://api.openweathermap.org/data/2.5/\"")
-            buildConfigField("String", "LOCATION_URL", "\"https://api.openweathermap.org/geo/1.0/\"")
-            buildConfigField("String", "ICON_URL", "\"https://openweathermap.org/img/wn/\"")
-            buildConfigField("String", "API_KEY", "\"28c17cf9201e7ff9acd7bb11b03333ed\"")
+            buildConfigField("String", "WEATHER_URL", project.property("WEATHER_URL") as String)
+            buildConfigField("String", "LOCATION_URL", project.property("LOCATION_URL") as String)
+            buildConfigField("String", "ICON_URL", project.property("ICON_URL") as String)
         }
     }
     compileOptions {
@@ -56,8 +55,22 @@ android {
         buildConfig = true
     }
     testOptions {
-        unitTests.isReturnDefaultValues = true
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
     }
+}
+
+secrets {
+    // Optionally specify a different file name containing your secrets.
+    // The plugin defaults to "local.properties"
+    defaultPropertiesFileName = "secrets.defaults.properties"
+
+    // Configure which keys should be ignored by the plugin by providing regular expressions.
+    // "sdk.dir" is ignored by default.
+    ignoreList.add("keyToIgnore") // Ignore the key "keyToIgnore"
+    ignoreList.add("sdk.*")       // Ignore all keys matching the regexp "sdk.*"
 }
 
 dependencies {
@@ -69,6 +82,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.play.services.contextmanager) { exclude(group = "com.android.support", module = "support-v4") }
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -91,9 +105,12 @@ dependencies {
     testImplementation(libs.hilt.android.testing)
     kspTest(libs.hilt.compiler)
 
-
     // DataStore
     implementation(libs.androidx.datastore.preferences)
+
+    // Paging 3
+    implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.paging.compose)
 
     // Coroutines test
     testImplementation(libs.kotlinx.coroutines.test)
@@ -103,4 +120,9 @@ dependencies {
 
     // Turbine
     testImplementation(libs.turbine)
+
+    // Robolectric
+    testImplementation(libs.androidx.junit)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.robolectric)
 }

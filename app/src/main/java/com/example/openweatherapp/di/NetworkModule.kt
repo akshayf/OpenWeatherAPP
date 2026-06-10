@@ -1,9 +1,8 @@
 package com.example.openweatherapp.di
 
 import com.example.openweatherapp.BuildConfig
-import com.example.openweatherapp.remote.AuthInterceptor
-import com.example.openweatherapp.remote.WeatherApi
-import com.example.openweatherapp.repository.WeatherRepository
+import com.example.openweatherapp.data.remote.api.WeatherApi
+import com.example.openweatherapp.data.remote.interceptor.AuthInterceptor
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -14,16 +13,21 @@ import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Named
 import javax.inject.Singleton
 
+/**
+ * Dagger Module for providing network-related dependencies.
+ */
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
+    /** Provides the AuthInterceptor. */
     @Provides
     @Singleton
     fun provideAuthInterceptor(): AuthInterceptor {
         return AuthInterceptor()
     }
 
+    /** Provides the common OkHttpClient. */
     @Provides
     @Singleton
     fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
@@ -32,6 +36,7 @@ object NetworkModule {
             .build()
     }
 
+    /** Provides Retrofit for weather data. */
     @Provides
     @Singleton
     @Named("weather")
@@ -43,6 +48,7 @@ object NetworkModule {
             .build()
     }
 
+    /** Provides Retrofit for location data. */
     @Provides
     @Singleton
     @Named("location")
@@ -54,22 +60,18 @@ object NetworkModule {
             .build()
     }
 
+    /** Provides the WeatherApi instance. */
     @Provides
     @Singleton
     fun provideWeatherApi(@Named("weather") retrofit: Retrofit): WeatherApi {
         return retrofit.create(WeatherApi::class.java)
     }
 
+    /** Provides a separate WeatherApi instance for location queries. */
     @Provides
     @Singleton
     @Named("locationApi")
     fun provideLocationApi(@Named("location") retrofit: Retrofit): WeatherApi {
         return retrofit.create(WeatherApi::class.java)
-    }
-
-    @Provides
-    @Singleton
-    fun provideWeatherRepository(weatherApi: WeatherApi, @Named("locationApi") locationApi: WeatherApi): WeatherRepository {
-        return WeatherRepository(weatherApi, locationApi)
     }
 }
