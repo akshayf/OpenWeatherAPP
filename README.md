@@ -1,68 +1,43 @@
 # 🌦️ OpenWeather App
 
-A modern, clean, and accessible Android Weather application built with **Jetpack Compose** and the **OpenWeather API**. This app demonstrates best practices in Android development, including MVVM architecture, clean code principles, and accessibility (ADA) optimizations.
+I built this app to be a clean, modern example of how a weather app should look and feel on Android today. It’s more than just a weather fetcher—it’s designed with a real focus on accessibility (ADA) and clean architecture using **Jetpack Compose**.
 
-## ✨ Features
+## 🚀 What this app does
 
-- **Real-time Weather**: Fetch current weather data for any city globally.
-- **Dynamic City Search**: Intelligent search with debounced queries using Paging 3 for a smooth experience.
-- **Detailed Metrics**: View temperature (min/max), humidity, wind speed, pressure, and feels-like temperature.
-- **Solar Cycle**: Accurate sunrise and sunset times formatted for your local timezone.
-- **Modern UI**: Material 3 design with color-coded iconography and responsive layouts.
-- **Robust Networking**: Handles offline states and API errors gracefully.
+*   **Smart Search**: Just start typing a city. It uses Paging 3 and debouncing so it won't spam the API while you're still typing.
+*   **Weather at a Glance**: You get the main temperature front and center, with a nice color-coded grid for the details like humidity, wind, and pressure.
+*   **Daylight Cycle**: I added sunrise and sunset times (formatted to your local time) because knowing when the sun is up is just as important as the temperature.
+*   **Offline Ready**: If you lose your connection, the app won't just crash or show a blank screen; it'll let you know what's going on.
 
-## 🛠️ Tech Stack
+## 🧠 How it was built (The "under the hood" stuff)
 
-- **UI**: [Jetpack Compose](https://developer.android.com/jetpack/compose) for a declarative UI.
-- **Architecture**: MVVM with a focus on Clean Architecture (Use Cases, Repositories).
-- **Dependency Injection**: [Hilt](https://developer.android.com/training/dependency-injection/hilt-android) for predictable scoping.
-- **Networking**: [Retrofit](https://square.github.io/retrofit/) & [Gson](https://github.com/google/gson).
-- **Async & Streams**: [Kotlin Coroutines](https://kotlinlang.org/docs/coroutines-overview.html) and [Flow](https://kotlinlang.org/docs/flow.html).
-- **Pagination**: [Paging 3](https://developer.android.com/topic/libraries/architecture/paging/v3-paged-data) for efficient city search results.
-- **Image Loading**: [Coil](https://coil-kt.github.io/coil/) for asynchronous weather icon loading.
-- **Storage**: [DataStore](https://developer.android.com/topic/libraries/architecture/datastore) for persisting the last searched city.
+I wanted to follow modern Android best practices as closely as possible:
 
-## ♿ Accessibility (ADA Optimization)
+*   **Architecture**: It uses **MVVM** with a clear separation of concerns. I used **Use Cases** to handle the business logic so the ViewModels stay lean.
+*   **UI**: 100% **Jetpack Compose**. It’s declarative, fast, and makes handling UI states way easier.
+*   **Dependency Injection**: Powered by **Hilt** to keep everything decoupled and testable.
+*   **Image Loading**: Used **Coil** for the weather icons because it’s lightweight and plays nice with Compose.
 
-This app is designed to be inclusive:
-- **Semantic Labels**: Custom `contentDescription` for all weather data and icons.
-- **LiveRegions**: Automatic announcements for error messages and loading states for Screen Reader (TalkBack) users.
-- **Touch Targets**: Large, accessible interactive elements meeting Material Design standards.
-- **High Contrast**: Carefully selected color palettes for readability.
+## ♿ Why Accessibility Matters
 
-## 🚀 Setup & Installation
+One thing I'm proud of is the accessibility work. I've added custom semantic properties and `LiveRegions`. This means if you're using TalkBack, the app will actually announce errors or changes as they happen, rather than leaving the user guessing.
 
-### 1. Get an API Key
-Sign up at [OpenWeatherMap](https://openweathermap.org/api) to get your free API key.
+## 🛠️ Setting it up locally
 
-### 2. Configure the App
-The project uses the `Secrets Gradle Plugin`. While a default key is provided in `secrets.defaults.properties`, you should use your own for development:
+Since we don't want to commit private API keys to Git, I've set up a system using the `Secrets Gradle Plugin`.
 
-1. Create a `local.properties` file in the root directory (if it doesn't exist).
-2. Add your API key:
-   ```properties
-   API_KEY=your_actual_api_key_here
-   ```
-
-### 3. Build & Run
-Open the project in **Android Studio (Ladybug or newer)** and run the `:app` module.
+1.  **Get your key**: Head over to [OpenWeatherMap](https://openweathermap.org/api) and grab a free API key.
+2.  **Add your key**: You have two options:
+    *   **Quick start**: I've included a `secrets.defaults.properties` file where you can drop your key.
+    *   **Better way**: Create a `local.properties` file in your root folder and add `API_KEY=your_key_here`. This is the safest way as it's ignored by Git.
+3.  **Build**: Open it in Android Studio (Ladybug+) and you're good to go.
 
 ## 🧪 Testing
 
-The project includes a comprehensive test suite using **JUnit 4**, **MockK**, **Turbine**, and **Robolectric**:
-- **Unit Tests**: Business logic and Use Cases.
-- **ViewModel Tests**: State management and Intent handling.
-- **UI Tests**: Component-level verification with Compose Test Rule.
-
-Run tests via terminal:
+I believe in code that actually works. There are unit tests for the logic and ViewModels, plus UI tests for the Compose components using **MockK** and **Robolectric**. You can run them all with:
 ```bash
 ./gradlew test
 ```
 
-## 📂 Project Structure
-
-- `data/`: Remote API interfaces, DTOs, and Repository implementations.
-- `domain/`: Business logic, Use Cases, and Repository interfaces.
-- `ui/`: Compose screens, components, themes, and UI logic (State/Intent).
-- `di/`: Hilt modules for dependency management.
-- `utils/`: Connectivity observers and resource providers.
+---
+*Feel free to explore the code! I've tried to keep the package structure very organized (`data`, `domain`, `ui`) so it's easy to navigate.*
